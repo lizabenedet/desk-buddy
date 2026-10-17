@@ -2,7 +2,8 @@
 // window at the panel's resolution, mouse acting as the touch screen.
 //
 // Dev keys: 0-9 and '-' set the resting mood, 'r' a short happy reaction,
-// 's' makes the buddy say something.
+// 's' makes the buddy say something, 'w' cycles fake weather, 'n' toggles
+// Wi-Fi, 'a' raises an alert.
 //
 // --shots <dir>: renders each mood to <dir>/<n>.bmp and exits, for visual
 // checks without screen capture.
@@ -11,10 +12,12 @@
 #include "event_bus.h"
 #include "face.h"
 #include "lvgl.h"
+#include "weather.h"
 
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -27,8 +30,30 @@
 #define SIM_H_RES 480
 #define SIM_V_RES 320
 
+// Stand-ins for what the board's fetcher would report.
+static void publish_fake_weather(void)
+{
+    static const int codes[] = {2, 63, 0, 95, 45};
+    static int next;
+    int code = codes[next++ % (int)(sizeof(codes) / sizeof(codes[0]))];
+
+    weather_report_t r = {.valid = true, .updated = time(NULL), .code = code, .day_code = code};
+    r.temp = 18.0f + (float)(next * 3 % 11);
+    r.temp_min = r.temp - 4.0f;
+    r.temp_max = r.temp + 6.0f;
+    if (weather_kind(code) == WEATHER_RAIN || weather_kind(code) == WEATHER_THUNDER) {
+        for (int h = 14; h < 19; h++) {
+            r.hourly_rain[h] = 70;
+        }
+        r.day_rain_prob = 70;
+    }
+    weather_store_set(&r);
+    event_bus_publish_simple(EV_WEATHER, 0);
+}
+
 static void on_key(lv_event_t *e)
 {
+    static bool wifi = true;
     uint32_t key = lv_event_get_key(e);
     if (key < 128) {
         key = (uint32_t)tolower((int)key); // Caps Lock shouldn't matter
@@ -44,6 +69,13 @@ static void on_key(lv_event_t *e)
         event_t ev = {.id = EV_SAY, .arg = 3000};
         strcpy(ev.text, "Olá! Ação não é fácil, viu?");
         event_bus_publish(&ev);
+    } else if (key == 'w') {
+        publish_fake_weather();
+    } else if (key == 'n') {
+        wifi = !wifi;
+        event_bus_publish_simple(EV_WIFI, wifi);
+    } else if (key == 'a') {
+        event_bus_publish_text(EV_ALERT, "Hora da pausa! 5 minutos.", 0);
     }
 }
 
@@ -118,6 +150,32 @@ static int take_shots(const char *dir)
             return 1;
         }
     }
+
+    // Then every module screen (tiles to the right of home).
+    lv_obj_t *tiles = lv_obj_get_child(lv_screen_active(), 0);
+    for (uint32_t i = 1; i < lv_obj_get_child_count(tiles); i++) {
+        lv_tileview_set_tile_by_index(tiles, i, 0, LV_ANIM_OFF);
+        run_for(400);
+        snprintf(path, sizeof(path), "%s/screen_%u.bmp", dir, (unsigned)i);
+        if (!save_screen_bmp(path)) {
+            fprintf(stderr, "failed to write %s\n", path);
+            return 1;
+        }
+    }
+
+    // Rainy day on the weather screen, then an alert on home.
+    publish_fake_weather();
+    lv_tileview_set_tile_by_index(tiles, 2, 0, LV_ANIM_OFF);
+    run_for(400);
+    snprintf(path, sizeof(path), "%s/rain.bmp", dir);
+    save_screen_bmp(path);
+
+    lv_tileview_set_tile_by_index(tiles, 0, 0, LV_ANIM_OFF);
+    event_bus_publish_text(EV_ALERT, "Hora da pausa! 5 minutos.", 0);
+    run_for(700);
+    // The alert border lives on the top layer, which snapshots of the screen skip.
+    snprintf(path, sizeof(path), "%s/alert.bmp", dir);
+    save_screen_bmp(path);
     return 0;
 }
 
@@ -130,6 +188,11 @@ int main(int argc, char **argv)
 
     app_start();
     setup_dev_keys();
+
+    // The PC already has network and a set clock.
+    event_bus_publish_simple(EV_WIFI, 1);
+    event_bus_publish_simple(EV_TIME_SYNCED, 0);
+    publish_fake_weather();
 
     if (argc == 3 && strcmp(argv[1], "--shots") == 0) {
         return take_shots(argv[2]);

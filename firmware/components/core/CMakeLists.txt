@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "event_bus.c" "face.c"
+    SRC_DIRS "."
     INCLUDE_DIRS "include"
-    PRIV_REQUIRES freertos
+    PRIV_REQUIRES freertos nvs_flash
 )

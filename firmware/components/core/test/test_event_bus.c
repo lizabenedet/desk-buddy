@@ -1,16 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
 
+#include "check.h"
 #include "event_bus.h"
-
-#define CHECK(cond)                                                          \
-    do {                                                                     \
-        if (!(cond)) {                                                       \
-            fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, \
-                    #cond);                                                  \
-            exit(1);                                                         \
-        }                                                                    \
-    } while (0)
 
 static int calls;
 static int32_t last_value;
@@ -86,8 +77,29 @@ static void test_republishing_handler_does_not_loop_forever(void)
     CHECK(event_bus_dispatch() == 32); // still pending, but bounded per call
 }
 
+static char last_text[EVENT_TEXT_MAX];
+
+static void text_handler(const event_t *ev, void *ctx)
+{
+    (void)ctx;
+    strcpy(last_text, ev->text);
+}
+
+static void test_publish_text_truncates(void)
+{
+    setup();
+    event_bus_subscribe(EV_SAY, text_handler, NULL);
+    char long_text[100];
+    memset(long_text, 'a', sizeof(long_text) - 1);
+    long_text[sizeof(long_text) - 1] = '\0';
+    CHECK(event_bus_publish_text(EV_SAY, long_text, 0));
+    event_bus_dispatch();
+    CHECK(strlen(last_text) == EVENT_TEXT_MAX - 1);
+}
+
 int main(void)
 {
+    test_publish_text_truncates();
     test_delivers_to_matching_subscriber();
     test_any_receives_everything();
     test_rejects_invalid_ids();

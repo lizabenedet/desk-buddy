@@ -1,19 +1,5 @@
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-
+#include "check.h"
 #include "face.h"
-
-#define CHECK(cond)                                                          \
-    do {                                                                     \
-        if (!(cond)) {                                                       \
-            fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, \
-                    #cond);                                                  \
-            exit(1);                                                         \
-        }                                                                    \
-    } while (0)
-
-#define NEAR(a, b) (fabsf((a) - (b)) < 0.001f)
 
 static void run(face_t *f, uint32_t ms)
 {

@@ -1,32 +1,53 @@
-#include <time.h>
-
 #include "module.h"
+#include "ui.h"
+
+LV_FONT_DECLARE(font_pt_20);
+
+static const char *const weekdays[] = {"domingo", "segunda-feira", "terça-feira", "quarta-feira",
+                                       "quinta-feira", "sexta-feira", "sábado"};
+static const char *const months[] = {"janeiro", "fevereiro", "março", "abril", "maio", "junho",
+                                     "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"};
 
 static lv_obj_t *time_label;
 static lv_obj_t *date_label;
+static int shown_minute = -1;
 
 static void refresh(lv_timer_t *t)
 {
     (void)t;
-    time_t now = time(NULL);
     struct tm tm;
-#ifdef _WIN32
-    localtime_s(&tm, &now);
-#else
-    localtime_r(&now, &tm);
-#endif
+    if (!ui_local_time(&tm)) {
+        lv_label_set_text(time_label, "--:--");
+        lv_label_set_text(date_label, "acertando o relógio...");
+        shown_minute = -1;
+        return;
+    }
+    if (tm.tm_min == shown_minute) {
+        return;
+    }
+    shown_minute = tm.tm_min;
     lv_label_set_text_fmt(time_label, "%02d:%02d", tm.tm_hour, tm.tm_min);
-    lv_label_set_text_fmt(date_label, "%02d/%02d/%04d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
+    lv_label_set_text_fmt(date_label, "%s, %d de %s", weekdays[tm.tm_wday], tm.tm_mday, months[tm.tm_mon]);
+}
+
+static void on_event(const event_t *ev)
+{
+    if (ev->id == EV_TIME_SYNCED) {
+        shown_minute = -1;
+        refresh(NULL);
+    }
 }
 
 static void create_screen(lv_obj_t *parent)
 {
     time_label = lv_label_create(parent);
-    lv_obj_set_style_text_font(time_label, &lv_font_montserrat_28, 0);
-    lv_obj_align(time_label, LV_ALIGN_CENTER, 0, -16);
+    lv_obj_set_style_text_font(time_label, &font_digits_64, 0);
+    lv_obj_align(time_label, LV_ALIGN_CENTER, 0, -24);
 
     date_label = lv_label_create(parent);
-    lv_obj_align(date_label, LV_ALIGN_CENTER, 0, 20);
+    lv_obj_set_style_text_font(date_label, &font_pt_20, 0);
+    lv_obj_set_style_text_color(date_label, lv_color_hex(UI_TEXT_DIM), 0);
+    lv_obj_align(date_label, LV_ALIGN_CENTER, 0, 34);
 
     refresh(NULL);
     lv_timer_create(refresh, 1000, NULL);
@@ -34,5 +55,6 @@ static void create_screen(lv_obj_t *parent)
 
 const module_t clock_module = {
     .name = "clock",
+    .on_event = on_event,
     .create_screen = create_screen,
 };

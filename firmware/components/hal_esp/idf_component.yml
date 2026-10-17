@@ -7,3 +7,6 @@ dependencies:
     version: "^9.4.0"
     public: true
   atanisoft/esp_lcd_touch_xpt2046: "*"
+  # Wi-Fi lives on the ESP32-C6, reached over SDIO.
+  espressif/esp_wifi_remote: "^1.6.5"
+  espressif/esp_hosted: "^3.0.9"

@@ -38,9 +38,11 @@ Limitação: SPI estável em ~16–20 MHz → ~6–8 fps em tela cheia. Animaç�
 - **ui** — rosto procedural (olhos/boca como parâmetros interpolados), barra de status, telas por swipe, balão de fala. Fixo em 480×320.
 - **hal_esp** — display ILI9486, toque XPT2046, Wi-Fi, mDNS, NVS, OTA.
 - **modules**
-  - `clock` — NTP, fuso configurável.
-  - `weather` — Open-Meteo (sem chave), lat/lon configuráveis.
-  - `timer` — timer, Pomodoro, alarmes (alerta visual).
+  - `clock` — NTP, fuso configurável, data por extenso.
+  - `weather` — Open-Meteo (sem chave), só o dia de hoje: agora, mín/máx, chance de chuva nas horas restantes e período de chuva. Resumo de "bom dia" no balão ao acordar; aviso quando há chuva provável nas próximas 3 h.
+  - `timer` — Pomodoro 25/5.
+  - `alarm` — um alarme diário.
+  - Alertas (timer/alarme): rosto em ALERTA, balão e borda piscando até tocar na tela. O display não tem controle de backlight.
   - `pet` — medidores **energia** e **felicidade** persistidos na NVS; influenciam a expressão padrão; sem punição. Toque no rosto = carinho/cutucar. Comportamento ambiente: piscar, olhar, tédio, dormir à noite.
   - `pc_link` — recebe eventos do agente; mostra buddy "sozinho/dormindo" quando o PC desconecta.
 

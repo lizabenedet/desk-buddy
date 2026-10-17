@@ -74,6 +74,15 @@ bool event_bus_publish_simple(event_id_t id, int32_t value)
     return event_bus_publish(&ev);
 }
 
+bool event_bus_publish_text(event_id_t id, const char *text, int32_t arg)
+{
+    event_t ev = {.id = id, .arg = arg};
+    if (text) {
+        strncpy(ev.text, text, EVENT_TEXT_MAX - 1);
+    }
+    return event_bus_publish(&ev);
+}
+
 static bool pop(event_t *out)
 {
     bool ok = false;
