@@ -9,6 +9,8 @@ firmware\sim\build.ps1        # compila e roda os testes
 firmware\sim\build.ps1 -Run   # ... e abre o simulador (mouse = toque, arraste para trocar de tela)
 ```
 
+Teclas no simulador: `0`–`9` e `-` trocam o humor, `r` faz uma reação feliz curta, `s` mostra o balão de fala. Clique rápido no rosto = cutucar, segurar = carinho.
+
 ## Firmware
 
 Num terminal "ESP-IDF PowerShell" (ou após `. C:\Espressif\tools\Microsoft.v6.0.3.PowerShell_profile.ps1`):

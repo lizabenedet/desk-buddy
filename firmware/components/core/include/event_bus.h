@@ -9,15 +9,24 @@
 
 typedef enum {
     EV_ANY = 0,         // subscribe-only: receive every event
-    EV_FACE_TOUCHED,
+    EV_FACE_TOUCHED,    // value: touch_kind_t
+    EV_FACE_MOOD,       // value: mood_t, the resting mood
+    EV_FACE_REACT,      // value: mood_t, arg: duration in ms
+    EV_SAY,             // text: what to say, arg: duration in ms
     EV_COUNT,
 } event_id_t;
+
+typedef enum {
+    TOUCH_TAP,          // quick poke
+    TOUCH_HOLD,         // long press, petting
+} touch_kind_t;
 
 #define EVENT_TEXT_MAX 48
 
 typedef struct {
     event_id_t id;
     int32_t value;
+    int32_t arg;
     char text[EVENT_TEXT_MAX];
 } event_t;
 
