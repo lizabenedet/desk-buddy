@@ -13,10 +13,14 @@ typedef struct {
     float happiness;
 } pet_t;
 
-#define PET_SLEEP_START_HOUR 23
+#define PET_SLEEP_START_HOUR 23    // defaults; see pet_set_sleep_hours
 #define PET_SLEEP_END_HOUR   7
 
 void pet_init(pet_t *p);
+
+// Bedtime window (local hours). start == end means it never sleeps.
+void pet_set_sleep_hours(int start, int end);
+int pet_wake_hour(void);
 
 // `hour` is local time (0..23), or -1 if the clock isn't set yet.
 void pet_update(pet_t *p, uint32_t dt_ms, int hour, bool pc_busy);

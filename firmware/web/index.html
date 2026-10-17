@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>desk-buddy</title>
+<style>
+  :root { --bg: #0e1116; --card: #171b22; --line: #2a303a; --text: #e8ecf1; --dim: #9aa4b0; --accent: #40e0ff; --bad: #ff6b6b; --ok: #50ffb0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .face { width: 40px; height: 40px; border-radius: 50%; background: #14181e; position: relative; flex: none; }
+  .face::before, .face::after { content: ""; position: absolute; top: 11px; width: 8px; height: 16px; border-radius: 3px; background: var(--accent); }
+  .face::before { left: 10px; } .face::after { right: 10px; }
+  h1 { font-size: 20px; margin: 0; }
+  .sub { color: var(--dim); font-size: 13px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); margin: 0 0 12px; }
+  label { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+  section label:first-of-type { border-top: 0; }
+  input[type=number], input[type=text] { width: 140px; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; text-align: right; }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button { padding: 10px 18px; border: 0; border-radius: 10px; background: var(--accent); color: #062029; font: 600 15px system-ui, sans-serif; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .msg { font-size: 14px; }
+  .msg.ok { color: var(--ok); } .msg.bad { color: var(--bad); }
+  progress { width: 100%; height: 8px; accent-color: var(--accent); }
+  code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="face"></div>
+    <div><h1>desk-buddy</h1><div class="sub" id="version">carregando...</div></div>
+  </header>
+
+  <form id="settings"></form>
+  <div class="row" style="margin-bottom:24px">
+    <button id="save" form="settings" disabled>Salvar</button>
+    <span class="msg" id="save-msg"></span>
+  </div>
+
+  <section id="ota-card">
+    <h2>Atualizar firmware</h2>
+    <p class="sub" style="margin-top:0">Envie o <code>build/desk_buddy.bin</code>. Se o firmware novo não subir, o buddy volta sozinho para o anterior.</p>
+    <div class="row">
+      <input type="file" id="ota-file" accept=".bin">
+      <button id="ota-send" disabled>Enviar</button>
+    </div>
+    <progress id="ota-progress" value="0" max="100" hidden></progress>
+    <div class="msg" id="ota-msg"></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const form = $("settings");
+let defs = [];
+
+function setMsg(el, text, ok) {
+  el.textContent = text;
+  el.className = "msg " + (ok ? "ok" : "bad");
+}
+
+async function load() {
+  const res = await fetch("/api/settings");
+  if (!res.ok) { setMsg($("save-msg"), "Erro ao carregar (" + res.status + ")", false); return; }
+  const data = await res.json();
+  defs = data.settings;
+  $("version").textContent = "firmware " + (data.version || "?");
+  if (!data.ota) { $("ota-card").hidden = true; }
+
+  const groups = new Map();
+  for (const d of defs) {
+    if (!groups.has(d.group)) groups.set(d.group, []);
+    groups.get(d.group).push(d);
+  }
+  form.replaceChildren();
+  for (const [name, items] of groups) {
+    const sec = document.createElement("section");
+    const h = document.createElement("h2");
+    h.textContent = name;
+    sec.append(h);
+    for (const d of items) {
+      const label = document.createElement("label");
+      const span = document.createElement("span");
+      span.textContent = d.label;
+      const input = document.createElement("input");
+      input.name = d.key;
+      if (d.type === "int") {
+        input.type = "number"; input.min = d.min; input.max = d.max; input.step = 1;
+      } else {
+        input.type = "text"; input.maxLength = 31;
+      }
+      input.value = d.value;
+      label.append(span, input);
+      sec.append(label);
+    }
+    form.append(sec);
+  }
+  $("save").disabled = false;
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const body = {};
+  for (const d of defs) {
+    const v = form.elements[d.key].value;
+    body[d.key] = d.type === "int" ? Number(v) : v;
+  }
+  $("save").disabled = true;
+  try {
+    const res = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json();
+    setMsg($("save-msg"), data.ok ? "Salvo!" : data.error, data.ok);
+  } catch (err) {
+    setMsg($("save-msg"), "Sem resposta do buddy", false);
+  }
+  $("save").disabled = false;
+});
+
+$("ota-file").addEventListener("change", () => { $("ota-send").disabled = !$("ota-file").files.length; });
+
+$("ota-send").addEventListener("click", () => {
+  const file = $("ota-file").files[0];
+  if (!file) return;
+  const xhr = new XMLHttpRequest();
+  const bar = $("ota-progress");
+  bar.hidden = false; bar.value = 0;
+  $("ota-send").disabled = true;
+  setMsg($("ota-msg"), "Enviando...", true);
+  xhr.upload.onprogress = (e) => { if (e.lengthComputable) bar.value = 100 * e.loaded / e.total; };
+  xhr.onload = () => {
+    let data = {};
+    try { data = JSON.parse(xhr.responseText); } catch (_) {}
+    if (xhr.status === 200 && data.ok) {
+      setMsg($("ota-msg"), "Pronto! O buddy está reiniciando...", true);
+      setTimeout(() => location.reload(), 15000);
+    } else {
+      setMsg($("ota-msg"), data.error || ("Falhou (" + xhr.status + ")"), false);
+      $("ota-send").disabled = false;
+    }
+  };
+  xhr.onerror = () => { setMsg($("ota-msg"), "A conexão caiu durante o envio", false); $("ota-send").disabled = false; };
+  xhr.open("POST", "/api/ota");
+  xhr.setRequestHeader("Content-Type", "application/octet-stream");
+  xhr.send(file);
+});
+
+load();
+</script>
+</body>
+</html>

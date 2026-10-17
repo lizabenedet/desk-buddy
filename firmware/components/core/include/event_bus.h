@@ -23,6 +23,7 @@ typedef enum {
     EV_CLAUDE,          // value: claude_event_t, text: project name (may be empty)
     EV_PC_METRICS,      // new values in pc_metrics_get()
     EV_PC_SLEEP,        // the PC is about to suspend or shut down
+    EV_SETTINGS_CHANGED, // text: setting key
     EV_COUNT,
 } event_id_t;
 

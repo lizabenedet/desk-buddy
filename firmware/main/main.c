@@ -2,6 +2,7 @@
 #include "display.h"
 #include "esp_log.h"
 #include "esp_lvgl_port.h"
+#include "esp_ota_ops.h"
 #include "net.h"
 #include "nvs_flash.h"
 #include "pc_server.h"
@@ -31,9 +32,15 @@ void app_main(void)
     net_start(CONFIG_BUDDY_WIFI_SSID, CONFIG_BUDDY_WIFI_PASSWORD, CONFIG_BUDDY_TZ);
 
     lvgl_port_lock(0);
-    app_start();
+    app_start();   // registers the modules' settings
     lvgl_port_unlock();
 
-    weather_fetch_start(CONFIG_BUDDY_LATITUDE, CONFIG_BUDDY_LONGITUDE, CONFIG_BUDDY_OPEN_METEO_TZ);
+    weather_fetch_start();
     pc_server_start();
+
+    // We got this far: keep this firmware. A freshly updated image that
+    // crashes before here is rolled back by the bootloader on the next reset.
+    if (esp_ota_mark_app_valid_cancel_rollback() == ESP_OK) {
+        ESP_LOGI(TAG, "firmware marked valid");
+    }
 }

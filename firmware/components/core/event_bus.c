@@ -36,17 +36,26 @@ void event_bus_reset(void)
     head = 0;
     count = 0;
     dropped = 0;
-    BUS_UNLOCK();
     subscriber_count = 0;
+    BUS_UNLOCK();
 }
 
 bool event_bus_subscribe(event_id_t id, event_handler_t handler, void *ctx)
 {
-    if (!handler || id >= EV_COUNT || subscriber_count == MAX_SUBSCRIBERS) {
+    if (!handler || id >= EV_COUNT) {
         return false;
     }
-    subscribers[subscriber_count++] = (subscriber_t){id, handler, ctx};
-    return true;
+    // May run on another task while the UI task dispatches: fill the slot,
+    // then publish it by bumping the count.
+    bool ok = false;
+    BUS_LOCK();
+    if (subscriber_count < MAX_SUBSCRIBERS) {
+        subscribers[subscriber_count] = (subscriber_t){id, handler, ctx};
+        subscriber_count++;
+        ok = true;
+    }
+    BUS_UNLOCK();
+    return ok;
 }
 
 bool event_bus_publish(const event_t *ev)
@@ -103,7 +112,10 @@ size_t event_bus_dispatch(void)
     size_t delivered = 0;
     event_t ev;
     while (delivered < QUEUE_LEN && pop(&ev)) {
-        for (size_t i = 0; i < subscriber_count; i++) {
+        BUS_LOCK();
+        size_t n = subscriber_count;
+        BUS_UNLOCK();
+        for (size_t i = 0; i < n; i++) {
             if (subscribers[i].id == EV_ANY || subscribers[i].id == ev.id) {
                 subscribers[i].handler(&ev, subscribers[i].ctx);
             }

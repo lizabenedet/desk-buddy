@@ -6,9 +6,11 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "pc_link.h"
+#include "web.h"
 #include "ws_server.h"
 
 #define MAX_CLIENTS 4
@@ -144,6 +146,94 @@ static void consume(client_t *c, size_t n)
     c->len -= n;
 }
 
+static void send_http(client_t *c, const char *status, const char *type, const char *body, const char *extra)
+{
+    char head[512];
+    size_t len = body ? strlen(body) : 0;
+    int n = snprintf(head, sizeof(head),
+                     "HTTP/1.1 %s\r\nContent-Type: %s\r\nContent-Length: %u\r\n%sConnection: close\r\n\r\n",
+                     status, type, (unsigned)len, extra ? extra : "");
+    send_all(c, head, (size_t)n);
+    if (len) {
+        send_all(c, body, len);
+    }
+}
+
+// Value of header `name` (lowercase, with ':') from the original request.
+static void header_value(const char *raw, const char *lower, const char *name, char *out, size_t len)
+{
+    out[0] = '\0';
+    const char *at = strstr(lower, name);
+    if (!at) {
+        return;
+    }
+    const char *p = raw + (at - lower) + strlen(name);
+    while (*p == ' ') {
+        p++;
+    }
+    size_t k = 0;
+    while (*p && *p != '\r' && k + 1 < len) {
+        out[k++] = *p++;
+    }
+    out[k] = '\0';
+}
+
+static char *read_file(const char *path)
+{
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        return NULL;
+    }
+    fseek(f, 0, SEEK_END);
+    long len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char *buf = malloc((size_t)len + 1);
+    if (buf && fread(buf, 1, (size_t)len, f) == (size_t)len) {
+        buf[len] = '\0';
+    } else {
+        free(buf);
+        buf = NULL;
+    }
+    fclose(f);
+    return buf;
+}
+
+// The buddy.local page, same routes as the board minus OTA. Always closes.
+static void handle_http(client_t *c, const char *lower, size_t header_len, const char *body)
+{
+    char auth[256];
+    header_value((const char *)c->buf, lower, "\nauthorization:", auth, sizeof(auth));
+    if (!web_auth_ok(auth, session.token)) {
+        send_http(c, "401 Unauthorized", "text/plain", "token errado",
+                  "WWW-Authenticate: Basic realm=\"" WEB_AUTH_REALM "\", charset=\"UTF-8\"\r\n");
+        return;
+    }
+    (void)header_len;
+    if (strncmp(lower, "get / ", 6) == 0) {
+        char *page = read_file(SIM_WEB_DIR "/index.html");
+        if (page) {
+            send_http(c, "200 OK", "text/html; charset=utf-8", page, NULL);
+            free(page);
+        } else {
+            send_http(c, "500 Internal Server Error", "text/plain", "index.html not found", NULL);
+        }
+    } else if (strncmp(lower, "get /api/settings ", 18) == 0) {
+        char *json = web_settings_body("simulador", false);
+        send_http(c, "200 OK", "application/json", json, NULL);
+        free(json);
+    } else if (strncmp(lower, "post /api/settings ", 19) == 0) {
+        bool ok;
+        char *reply = web_apply_settings(body, &ok);
+        send_http(c, ok ? "200 OK" : "400 Bad Request", "application/json", reply, NULL);
+        free(reply);
+    } else if (strncmp(lower, "post /api/ota ", 14) == 0) {
+        send_http(c, "501 Not Implemented", "application/json",
+                  "{\"ok\":false,\"error\":\"o simulador não atualiza firmware\"}", NULL);
+    } else {
+        send_http(c, "404 Not Found", "text/plain", "not found", NULL);
+    }
+}
+
 // Returns false if the connection must be closed.
 static bool handle_handshake(client_t *c)
 {
@@ -161,8 +251,21 @@ static bool handle_handshake(client_t *c)
     lower[header_len] = '\0';
     const char *key_at = strstr(lower, "sec-websocket-key:");
     if (strncmp(lower, "get /ws ", 8) != 0 || !key_at) {
-        const char *resp = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
-        send_all(c, resp, strlen(resp));
+        // Plain HTTP: wait for the whole body, answer, close.
+        char cl[16];
+        header_value((const char *)c->buf, lower, "\ncontent-length:", cl, sizeof(cl));
+        size_t body_len = (size_t)atoi(cl);
+        if (header_len + body_len >= BUF_SIZE) {
+            send_http(c, "413 Payload Too Large", "text/plain", "too large", NULL);
+            return false;
+        }
+        if (c->len < header_len + body_len) {
+            return true;
+        }
+        char body[BUF_SIZE];
+        memcpy(body, c->buf + header_len, body_len);
+        body[body_len] = '\0';
+        handle_http(c, lower, header_len, body);
         return false;
     }
     // Read the key from the original (case matters).

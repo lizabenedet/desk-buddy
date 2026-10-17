@@ -221,10 +221,22 @@ float pc_metrics_max_temp(const pc_metrics_t *m)
     return m->cpu_temp > m->gpu_temp ? m->cpu_temp : m->gpu_temp;
 }
 
+static float hot_threshold = PC_HOT_C;
+
+void pc_metrics_set_hot(float celsius)
+{
+    hot_threshold = celsius;
+}
+
+float pc_metrics_hot_threshold(void)
+{
+    return hot_threshold;
+}
+
 bool pc_metrics_hot(const pc_metrics_t *m)
 {
     float t = pc_metrics_max_temp(m);
-    return !isnan(t) && t >= PC_HOT_C;
+    return !isnan(t) && t >= hot_threshold;
 }
 
 bool pc_metrics_busy(const pc_metrics_t *m)

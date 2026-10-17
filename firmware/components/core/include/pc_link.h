@@ -65,9 +65,12 @@ typedef struct {
 void pc_metrics_get(pc_metrics_t *out);
 void pc_metrics_clear(void);   // on disconnect
 
-#define PC_HOT_C        80.0f
-#define PC_BURNING_C    90.0f
+#define PC_HOT_C        80.0f   // default; see pc_metrics_set_hot
+#define PC_BURNING_OVER 10.0f   // "burning" = hot + this
 #define PC_BUSY_CPU     85.0f
+
+void pc_metrics_set_hot(float celsius);
+float pc_metrics_hot_threshold(void);
 
 // Hottest of CPU/GPU in °C, NaN if unknown.
 float pc_metrics_max_temp(const pc_metrics_t *m);

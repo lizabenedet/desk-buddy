@@ -50,11 +50,11 @@ Cada módulo registra: handlers de eventos, opcionalmente uma tela de swipe e ca
 
 **Telas (layout fixo):** rosto como tela principal com barra de status no topo (hora, clima, Wi-Fi/PC, timer ativo); swipe para relógio/clima detalhado, timer/alarmes, status do PC, configurações.
 
-**Configuração:** Wi-Fi via `menuconfig` (v1); demais opções na página web `http://buddy.local`. Portal `Buddy-Setup` (SoftAP) fica para v1.1, após validar AP via `esp-hosted`.
+**Configuração:** Wi-Fi e fuso via `menuconfig` (v1); o resto na página `http://buddy.local`, montada a partir dos campos que cada módulo declara (`module_t.settings`): localização do clima, Pomodoro, horário de dormir, temperatura de "calor". Portal `Buddy-Setup` (SoftAP) fica para v1.1, após validar AP via `esp-hosted`.
 
-**OTA** via Wi-Fi pela página `buddy.local`.
+**OTA** pela página ou `curl` (`POST /api/ota`), em duas partições de 6 MB, com rollback: o firmware novo só é confirmado depois de subir a tela.
 
-**Segurança:** token compartilhado gerado no primeiro boot (exibido na tela de configurações), exigido na conexão WebSocket; senha para página web e OTA. Sem TLS.
+**Segurança:** token gerado no primeiro boot (tela Sistema), exigido no `hello` do WebSocket e como senha (Basic auth, usuário `buddy`) da página e do OTA. Sem TLS.
 
 ### Comunicação
 

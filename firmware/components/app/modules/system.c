@@ -64,15 +64,20 @@ static void create_screen(lv_obj_t *parent)
     wifi_label = line(parent, 56);
     pc_label = line(parent, 92);
 
-    lv_obj_t *caption = line(parent, 160);
+    lv_obj_t *caption = line(parent, 140);
     lv_obj_set_style_text_color(caption, lv_color_hex(UI_TEXT_DIM), 0);
-    lv_label_set_text(caption, "Token para o agente do PC:");
+    lv_label_set_text(caption, "Token (agente do PC e senha da página):");
 
     lv_obj_t *t = lv_label_create(parent);
     lv_obj_set_style_text_font(t, &lv_font_montserrat_28, 0);
     lv_obj_set_style_text_letter_space(t, 4, 0);
     lv_label_set_text(t, token);
-    lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 196);
+    lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 174);
+
+    lv_obj_t *page = line(parent, 236);
+    lv_obj_set_style_text_color(page, lv_color_hex(UI_TEXT_DIM), 0);
+    lv_label_set_text(page, "Configurações: http://buddy.local\nusuário: buddy");
+    lv_obj_set_style_text_align(page, LV_TEXT_ALIGN_CENTER, 0);
 
     refresh();
 }

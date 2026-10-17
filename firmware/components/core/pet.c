@@ -23,9 +23,29 @@ void pet_init(pet_t *p)
     p->happiness = 70.0f;
 }
 
+static int sleep_start = PET_SLEEP_START_HOUR;
+static int sleep_end = PET_SLEEP_END_HOUR;
+
+void pet_set_sleep_hours(int start, int end)
+{
+    sleep_start = start;
+    sleep_end = end;
+}
+
+int pet_wake_hour(void)
+{
+    return sleep_end;
+}
+
 bool pet_is_sleep_time(int hour)
 {
-    return hour >= 0 && (hour >= PET_SLEEP_START_HOUR || hour < PET_SLEEP_END_HOUR);
+    if (hour < 0 || sleep_start == sleep_end) {
+        return false;
+    }
+    if (sleep_start > sleep_end) {   // crosses midnight, e.g. 23 -> 7
+        return hour >= sleep_start || hour < sleep_end;
+    }
+    return hour >= sleep_start && hour < sleep_end;
 }
 
 void pet_update(pet_t *p, uint32_t dt_ms, int hour, bool pc_busy)

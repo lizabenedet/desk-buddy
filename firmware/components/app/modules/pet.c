@@ -77,6 +77,10 @@ static void on_event(const event_t *ev)
             refresh_bars();
         }
         break;
+    case EV_SETTINGS_CHANGED:
+        pet_set_sleep_hours(settings_get_int("sleep_start"), settings_get_int("sleep_end"));
+        publish_mood();
+        break;
     case EV_TIME_SYNCED:     // the hour decides whether it's bedtime
     case EV_PC_METRICS:      // ...and PC heat whether it's hot
     case EV_PC_CONNECTED:
@@ -96,6 +100,7 @@ static void init(void)
     } else {
         pet_init(&pet);
     }
+    pet_set_sleep_hours(settings_get_int("sleep_start"), settings_get_int("sleep_end"));
     last_tick = lv_tick_get();
     publish_mood();
     lv_timer_create(tick, UPDATE_MS, NULL);
@@ -129,9 +134,16 @@ static void create_screen(lv_obj_t *parent)
     refresh_bars();
 }
 
+static const setting_def_t settings[] = {
+    {"sleep_start", "Pet", "Dorme às (hora)", SETTING_INT, 0, 23, PET_SLEEP_START_HOUR, NULL},
+    {"sleep_end", "Pet", "Acorda às (hora)", SETTING_INT, 0, 23, PET_SLEEP_END_HOUR, NULL},
+};
+
 const module_t pet_module = {
     .name = "pet",
     .init = init,
     .on_event = on_event,
     .create_screen = create_screen,
+    .settings = settings,
+    .settings_count = sizeof(settings) / sizeof(settings[0]),
 };

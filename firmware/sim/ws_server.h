@@ -2,8 +2,8 @@
 
 #include <stdint.h>
 
-// Minimal WebSocket server for the simulator (Winsock, localhost only):
-// text frames, no fragmentation. Feeds pc_session like the board does.
+// Minimal WebSocket + HTTP server for the simulator (Winsock, localhost only):
+// the agent's /ws (text frames, no fragmentation) and the settings page.
 void ws_server_start(uint16_t port);
 
 // Non-blocking; call from the main loop.

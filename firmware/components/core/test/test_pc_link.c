@@ -109,6 +109,10 @@ static void test_metrics_partial(void)
     pc_metrics_get(&m);
     CHECK(NEAR(pc_metrics_max_temp(&m), 83.0f) && pc_metrics_hot(&m) && pc_metrics_busy(&m));
 
+    pc_metrics_set_hot(85.0f);
+    CHECK(!pc_metrics_hot(&m));     // 83 °C is fine at an 85 °C threshold
+    pc_metrics_set_hot(PC_HOT_C);
+
     pc_metrics_clear();
     pc_metrics_get(&m);
     CHECK(!m.valid && !pc_metrics_hot(&m));

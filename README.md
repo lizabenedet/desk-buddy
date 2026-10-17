@@ -26,7 +26,20 @@ idf.py build
 idf.py -p COMx flash monitor
 ```
 
-Cidade padrão do clima: Jaraguá do Sul (lat/lon e fuso também no menu `desk-buddy`).
+O fuso horário também fica no menu `desk-buddy`.
+
+### Página de configurações e atualização (OTA)
+
+Em `http://buddy.local` (usuário `buddy`, senha = token da tela **Sistema**): localização do clima (padrão: Jaraguá do Sul), duração do Pomodoro, horário de dormir do pet, temperatura de "calor" do PC e envio de firmware novo. Depois do primeiro `flash` pelo cabo, as atualizações podem ir pela página ou por:
+
+```powershell
+idf.py build
+curl.exe -u buddy:SEU-TOKEN --data-binary "@build/desk_buddy.bin" http://buddy.local/api/ota
+```
+
+Se o firmware novo não subir até a tela, a placa volta sozinha para o anterior no próximo reinício. No simulador a página fica em `http://127.0.0.1:8765/` (sem OTA).
+
+Para um módulo ganhar campos na página, preencha `settings` no `module_t` (veja `timer.c`).
 
 ## Agente do PC
 

@@ -5,6 +5,7 @@
 
 #include "module.h"
 #include "pc_link.h"
+#include "settings.h"
 #include "ui.h"
 
 LV_FONT_DECLARE(font_pt_20);
@@ -63,7 +64,8 @@ static void check_burning(void)
     pc_metrics_get(&m);
     float t = pc_metrics_max_temp(&m);
     time_t now = time(NULL);
-    if (isnan(t) || t < PC_BURNING_C || (last_burning_warn && now - last_burning_warn < BURNING_WARN_EVERY_S)) {
+    float burning = pc_metrics_hot_threshold() + PC_BURNING_OVER;
+    if (isnan(t) || t < burning || (last_burning_warn && now - last_burning_warn < BURNING_WARN_EVERY_S)) {
         return;
     }
     last_burning_warn = now;
@@ -72,9 +74,17 @@ static void check_burning(void)
     event_bus_publish_text(EV_SAY, text, 8000);
 }
 
+static void apply_settings(void)
+{
+    pc_metrics_set_hot((float)settings_get_int("pc_hot_c"));
+}
+
 static void on_event(const event_t *ev)
 {
     switch (ev->id) {
+    case EV_SETTINGS_CHANGED:
+        apply_settings();
+        break;
     case EV_PC_METRICS:
         refresh();
         check_burning();
@@ -127,8 +137,15 @@ static void create_screen(lv_obj_t *parent)
     refresh();
 }
 
+static const setting_def_t settings[] = {
+    {"pc_hot_c", "PC", "Temperatura de \"calor\" (°C)", SETTING_INT, 50, 100, (int32_t)PC_HOT_C, NULL},
+};
+
 const module_t pc_module = {
     .name = "pc",
+    .init = apply_settings,
     .on_event = on_event,
     .create_screen = create_screen,
+    .settings = settings,
+    .settings_count = sizeof(settings) / sizeof(settings[0]),
 };

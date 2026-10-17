@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include "esp_crt_bundle.h"
@@ -11,6 +12,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "net.h"
+#include "settings.h"
 #include "weather.h"
 
 static const char *TAG = "weather";
@@ -20,23 +22,40 @@ static const char *TAG = "weather";
 #define BODY_MAX        4096
 #define URL_MAX         512
 
-typedef struct {
-    const char *lat;
-    const char *lon;
-    const char *tz;
-} fetch_cfg_t;
+static TaskHandle_t fetch_task_handle;
 
-static fetch_cfg_t cfg;
+// Coordinates go straight into the URL: allow only what a number needs.
+static bool is_coordinate(const char *s)
+{
+    if (!*s) {
+        return false;
+    }
+    for (; *s; s++) {
+        if (!((*s >= '0' && *s <= '9') || *s == '.' || *s == '-')) {
+            return false;
+        }
+    }
+    return true;
+}
 
 static bool fetch_once(char *body)
 {
+    char lat[SETTING_TEXT_MAX], lon[SETTING_TEXT_MAX];
+    settings_get_text("weather_lat", lat, sizeof(lat));
+    settings_get_text("weather_lon", lon, sizeof(lon));
+    if (!is_coordinate(lat) || !is_coordinate(lon)) {
+        ESP_LOGW(TAG, "invalid location '%s', '%s'", lat, lon);
+        return false;
+    }
+
+    // timezone=auto: hours come in the location's own timezone.
     char url[URL_MAX];
     snprintf(url, sizeof(url),
              "https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s"
              "&current=temperature_2m,weather_code&hourly=precipitation_probability"
              "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
-             "&forecast_days=1&timezone=%s",
-             cfg.lat, cfg.lon, cfg.tz);
+             "&forecast_days=1&timezone=auto",
+             lat, lon);
 
     esp_http_client_config_t http = {
         .url = url,
@@ -83,12 +102,21 @@ static void fetch_task(void *arg)
     for (;;) {
         net_wait_connected(portMAX_DELAY);
         bool ok = fetch_once(body);
-        vTaskDelay(pdMS_TO_TICKS(ok ? REFRESH_MS : RETRY_MS));
+        // Sleep until the next refresh, or until the location changes.
+        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(ok ? REFRESH_MS : RETRY_MS));
     }
 }
 
-void weather_fetch_start(const char *latitude, const char *longitude, const char *tz_url_encoded)
+static void on_settings_changed(const event_t *ev, void *ctx)
 {
-    cfg = (fetch_cfg_t){latitude, longitude, tz_url_encoded};
-    xTaskCreate(fetch_task, "weather", 10 * 1024, NULL, 3, NULL);
+    (void)ctx;
+    if (strncmp(ev->text, "weather_", 8) == 0) {
+        xTaskNotifyGive(fetch_task_handle);
+    }
+}
+
+void weather_fetch_start(void)
+{
+    xTaskCreate(fetch_task, "weather", 10 * 1024, NULL, 3, &fetch_task_handle);
+    event_bus_subscribe(EV_SETTINGS_CHANGED, on_settings_changed, NULL);
 }

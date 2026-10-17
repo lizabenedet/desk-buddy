@@ -13,19 +13,6 @@ menu "desk-buddy"
         default "<-03>3"
         help
             America/Sao_Paulo is "<-03>3" (UTC-3, no daylight saving).
-
-    config BUDDY_LATITUDE
-        string "Latitude for the weather"
-        default "-26.4851"
-        help
-            Default: Jaraguá do Sul, SC.
-
-    config BUDDY_LONGITUDE
-        string "Longitude for the weather"
-        default "-49.0713"
-
-    config BUDDY_OPEN_METEO_TZ
-        string "Timezone name sent to Open-Meteo (URL-encoded)"
-        default "America%2FSao_Paulo"
+            The weather location is set on the buddy.local page.
 
 endmenu

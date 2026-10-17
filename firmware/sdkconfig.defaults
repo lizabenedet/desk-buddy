@@ -37,3 +37,6 @@ CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
 
 # WebSocket server for the PC agent.
 CONFIG_HTTPD_WS_SUPPORT=y
+
+# OTA: a new image must confirm itself after booting or it's rolled back.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y

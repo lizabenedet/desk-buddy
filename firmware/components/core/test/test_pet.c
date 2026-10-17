@@ -60,8 +60,20 @@ static void test_resting_mood(void)
     CHECK(pet_resting_mood(&p, 14, false) == MOOD_HAPPY);
 }
 
+static void test_custom_sleep_hours(void)
+{
+    pet_set_sleep_hours(1, 9);          // same-day window
+    CHECK(pet_is_sleep_time(1) && pet_is_sleep_time(8));
+    CHECK(!pet_is_sleep_time(0) && !pet_is_sleep_time(9) && !pet_is_sleep_time(23));
+    CHECK(pet_wake_hour() == 9);
+    pet_set_sleep_hours(5, 5);          // never sleeps
+    CHECK(!pet_is_sleep_time(5) && !pet_is_sleep_time(0));
+    pet_set_sleep_hours(PET_SLEEP_START_HOUR, PET_SLEEP_END_HOUR);
+}
+
 int main(void)
 {
+    test_custom_sleep_hours();
     test_drains_by_day_recovers_at_night();
     test_busy_pc_drains_faster();
     test_meters_clamped();

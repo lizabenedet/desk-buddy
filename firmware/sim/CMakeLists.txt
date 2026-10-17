@@ -59,6 +59,7 @@ endif()
 
 add_executable(desk_buddy_sim main.c ws_server.c)
 target_link_libraries(desk_buddy_sim PRIVATE app ws2_32)
+target_compile_definitions(desk_buddy_sim PRIVATE SIM_WEB_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../web")
 add_custom_command(TARGET desk_buddy_sim POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:SDL2::SDL2> $<TARGET_FILE_DIR:desk_buddy_sim>
 )

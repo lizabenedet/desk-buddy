@@ -43,6 +43,9 @@ void app_start(void)
     uint8_t col = 0;
     for (size_t i = 0; i < app_module_count; i++) {
         const module_t *m = app_modules[i];
+        if (m->settings_count) {
+            settings_register(m->settings, m->settings_count);
+        }
         if (m->init) {
             m->init();
         }

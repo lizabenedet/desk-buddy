@@ -11,8 +11,7 @@
 #include "weather.h"
 
 #define CHECK_PERIOD_MS     60000
-#define GREETING_FROM_HOUR  PET_SLEEP_END_HOUR
-#define GREETING_UNTIL_HOUR 11
+#define GREETING_UNTIL_HOUR 11   // greet from wake-up time until this hour
 #define GREETING_MS         60000
 #define WARNING_MS          20000
 
@@ -94,7 +93,7 @@ static void maybe_talk(lv_timer_t *t)
     char phrase[32];
     char text[EVENT_TEXT_MAX];
 
-    if (greeted_yday != tm.tm_yday && tm.tm_hour >= GREETING_FROM_HOUR && tm.tm_hour < GREETING_UNTIL_HOUR) {
+    if (greeted_yday != tm.tm_yday && tm.tm_hour >= pet_wake_hour() && tm.tm_hour < GREETING_UNTIL_HOUR) {
         greeted_yday = tm.tm_yday;
         rain_phrase(&r, tm.tm_hour, phrase, sizeof(phrase));
         snprintf(text, sizeof(text), "Bom dia! Hoje %d°–%d°, %s%s.", round_temp(r.temp_min),
@@ -157,8 +156,16 @@ static void create_screen(lv_obj_t *parent)
     lv_timer_create(maybe_talk, CHECK_PERIOD_MS, NULL);
 }
 
+// Read by the board's fetcher (Jaraguá do Sul by default).
+static const setting_def_t settings[] = {
+    {"weather_lat", "Clima", "Latitude", SETTING_TEXT, 0, 0, 0, "-26.4851"},
+    {"weather_lon", "Clima", "Longitude", SETTING_TEXT, 0, 0, 0, "-49.0713"},
+};
+
 const module_t weather_module = {
     .name = "weather",
     .on_event = on_event,
     .create_screen = create_screen,
+    .settings = settings,
+    .settings_count = sizeof(settings) / sizeof(settings[0]),
 };

@@ -10,6 +10,7 @@
 #include "esp_timer.h"
 #include "mdns.h"
 #include "pc_link.h"
+#include "web_routes.h"
 
 static const char *TAG = "pc_server";
 
@@ -120,6 +121,7 @@ void pc_server_start(void)
     httpd_config_t cfg = HTTPD_DEFAULT_CONFIG();
     cfg.close_fn = on_close;
     cfg.lru_purge_enable = true;
+    cfg.stack_size = 8192;   // cJSON for the settings page, OTA writes
     if (httpd_start(&server, &cfg) != ESP_OK) {
         ESP_LOGE(TAG, "httpd start failed");
         return;
@@ -131,6 +133,7 @@ void pc_server_start(void)
         .is_websocket = true,
     };
     httpd_register_uri_handler(server, &ws);
+    web_routes_register(server, token);
 
     const esp_timer_create_args_t args = {.callback = timer_cb, .name = "pc_timeout"};
     esp_timer_handle_t timer;
