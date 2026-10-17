@@ -3,6 +3,9 @@
 //
 // Dev keys: 0-9 and '-' set the resting mood, 'r' a short happy reaction,
 // 's' makes the buddy say something.
+//
+// --shots <dir>: renders each mood to <dir>/<n>.bmp and exits, for visual
+// checks without screen capture.
 
 #include "app.h"
 #include "event_bus.h"
@@ -10,6 +13,7 @@
 #include "lvgl.h"
 
 #include <ctype.h>
+#include <stdio.h>
 #include <string.h>
 
 #ifdef _WIN32
@@ -56,7 +60,68 @@ static void setup_dev_keys(void)
     lv_obj_add_event_cb(sink, on_key, LV_EVENT_KEY, NULL);
 }
 
-int main(void)
+static void run_for(uint32_t ms)
+{
+    uint32_t start = lv_tick_get();
+    while (lv_tick_elaps(start) < ms) {
+        lv_timer_handler();
+        sleep_ms(5);
+    }
+}
+
+// Writes the active screen as a 24-bit BMP (LVGL's RGB888 is BGR in memory, like BMP).
+static bool save_screen_bmp(const char *path)
+{
+    lv_draw_buf_t *buf = lv_snapshot_take(lv_screen_active(), LV_COLOR_FORMAT_RGB888);
+    if (!buf) {
+        return false;
+    }
+    uint32_t w = buf->header.w, h = buf->header.h;
+    uint32_t row = (w * 3 + 3) & ~3u;
+    uint32_t data_size = row * h;
+    uint8_t hdr[54] = {'B', 'M'};
+    uint32_t file_size = 54 + data_size;
+    memcpy(&hdr[2], &file_size, 4);
+    hdr[10] = 54;
+    hdr[14] = 40;
+    memcpy(&hdr[18], &w, 4);
+    memcpy(&hdr[22], &h, 4);
+    hdr[26] = 1;
+    hdr[28] = 24;
+    memcpy(&hdr[34], &data_size, 4);
+
+    FILE *f = fopen(path, "wb");
+    if (!f) {
+        lv_draw_buf_destroy(buf);
+        return false;
+    }
+    fwrite(hdr, 1, sizeof(hdr), f);
+    uint8_t pad[3] = {0};
+    for (uint32_t y = h; y-- > 0;) {
+        fwrite(buf->data + y * buf->header.stride, 1, w * 3, f);
+        fwrite(pad, 1, row - w * 3, f);
+    }
+    fclose(f);
+    lv_draw_buf_destroy(buf);
+    return true;
+}
+
+static int take_shots(const char *dir)
+{
+    char path[512];
+    for (int m = 0; m < MOOD_COUNT; m++) {
+        event_bus_publish_simple(EV_FACE_MOOD, m);
+        run_for(600);
+        snprintf(path, sizeof(path), "%s/%02d.bmp", dir, m);
+        if (!save_screen_bmp(path)) {
+            fprintf(stderr, "failed to write %s\n", path);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int main(int argc, char **argv)
 {
     lv_init();
     lv_display_t *disp = lv_sdl_window_create(SIM_H_RES, SIM_V_RES);
@@ -65,6 +130,10 @@ int main(void)
 
     app_start();
     setup_dev_keys();
+
+    if (argc == 3 && strcmp(argv[1], "--shots") == 0) {
+        return take_shots(argv[2]);
+    }
 
     for (;;) {
         uint32_t idle = lv_timer_handler();

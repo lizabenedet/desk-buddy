@@ -15,6 +15,8 @@
 #define LV_USE_LOG 1
 #define LV_LOG_PRINTF 1
 
+#define LV_USE_SNAPSHOT 1
+
 #define LV_USE_SYSMON 1
 #define LV_USE_PERF_MONITOR 1
 
