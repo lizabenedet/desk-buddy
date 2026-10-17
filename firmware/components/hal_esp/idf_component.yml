@@ -1,0 +1,9 @@
+dependencies:
+  idf: ">=6.0"
+  espressif/esp_lvgl_port:
+    version: "^2.9.0"
+    public: true
+  lvgl/lvgl:
+    version: "^9.4.0"
+    public: true
+  atanisoft/esp_lcd_touch_xpt2046: "*"
