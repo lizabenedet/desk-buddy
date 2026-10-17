@@ -57,8 +57,8 @@ if(MSVC)
     target_compile_options(app PRIVATE /W3 /we4013)
 endif()
 
-add_executable(desk_buddy_sim main.c)
-target_link_libraries(desk_buddy_sim PRIVATE app)
+add_executable(desk_buddy_sim main.c ws_server.c)
+target_link_libraries(desk_buddy_sim PRIVATE app ws2_32)
 add_custom_command(TARGET desk_buddy_sim POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:SDL2::SDL2> $<TARGET_FILE_DIR:desk_buddy_sim>
 )

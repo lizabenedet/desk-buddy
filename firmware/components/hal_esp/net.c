@@ -51,7 +51,6 @@ static void start_sntp(void)
 static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
     (void)arg;
-    (void)data;
     if (base == WIFI_EVENT && id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
@@ -63,10 +62,15 @@ static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id, void *da
         esp_timer_start_once(retry_timer, (uint64_t)retry_ms * 1000);
         retry_ms = retry_ms * 2 > RETRY_MAX_MS ? RETRY_MAX_MS : retry_ms * 2;
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
-        ESP_LOGI(TAG, "got IP");
+        const ip_event_got_ip_t *got = data;
+        char ip[16];
+        esp_ip4addr_ntoa(&got->ip_info.ip, ip, sizeof(ip));
+        ESP_LOGI(TAG, "got IP %s", ip);
         retry_ms = RETRY_MIN_MS;
         xEventGroupSetBits(net_events, CONNECTED_BIT);
-        event_bus_publish_simple(EV_WIFI, 1);
+        event_t ev = {.id = EV_WIFI, .value = 1};
+        strncpy(ev.text, ip, EVENT_TEXT_MAX - 1);
+        event_bus_publish(&ev);
         start_sntp();
     }
 }
@@ -77,6 +81,9 @@ void net_start(const char *ssid, const char *password, const char *tz)
     tzset();
 
     net_events = xEventGroupCreate();
+    // The network stack is needed by the servers even without Wi-Fi.
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
     if (!ssid || !ssid[0]) {
         ESP_LOGW(TAG, "no Wi-Fi SSID configured (idf.py menuconfig -> desk-buddy)");
         return;
@@ -84,9 +91,6 @@ void net_start(const char *ssid, const char *password, const char *tz)
 
     const esp_timer_create_args_t timer_args = {.callback = retry_connect, .name = "wifi_retry"};
     ESP_ERROR_CHECK(esp_timer_create(&timer_args, &retry_timer));
-
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
 
     wifi_init_config_t init = WIFI_INIT_CONFIG_DEFAULT();

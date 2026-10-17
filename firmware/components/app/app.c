@@ -32,8 +32,15 @@ void app_start(void)
     lv_obj_set_style_bg_opa(tiles, LV_OPA_TRANSP, 0);
     lv_obj_set_scrollbar_mode(tiles, LV_SCROLLBAR_MODE_OFF);
 
-    home_create(lv_tileview_add_tile(tiles, 0, 0, LV_DIR_RIGHT));
+    // Tiles are contiguous: modules without a screen don't take a slot.
+    size_t screens = 0;
+    for (size_t i = 0; i < app_module_count; i++) {
+        screens += app_modules[i]->create_screen != NULL;
+    }
 
+    home_create(lv_tileview_add_tile(tiles, 0, 0, screens ? LV_DIR_RIGHT : LV_DIR_NONE));
+
+    uint8_t col = 0;
     for (size_t i = 0; i < app_module_count; i++) {
         const module_t *m = app_modules[i];
         if (m->init) {
@@ -43,8 +50,9 @@ void app_start(void)
             event_bus_subscribe(EV_ANY, on_any_event, (void *)m);
         }
         if (m->create_screen) {
-            lv_dir_t dir = LV_DIR_LEFT | (i + 1 < app_module_count ? LV_DIR_RIGHT : 0);
-            m->create_screen(lv_tileview_add_tile(tiles, (uint8_t)(i + 1), 0, dir));
+            col++;
+            lv_dir_t dir = LV_DIR_LEFT | (col < screens ? LV_DIR_RIGHT : LV_DIR_NONE);
+            m->create_screen(lv_tileview_add_tile(tiles, col, 0, dir));
         }
     }
 

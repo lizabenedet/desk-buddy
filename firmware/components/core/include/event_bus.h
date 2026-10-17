@@ -12,13 +12,17 @@ typedef enum {
     EV_FACE_TOUCHED,    // value: touch_kind_t
     EV_FACE_MOOD,       // value: mood_t, the resting mood
     EV_FACE_REACT,      // value: mood_t, arg: duration in ms
-    EV_SAY,             // text: what to say, arg: duration in ms
+    EV_SAY,             // text: what to say ("" hides the bubble), arg: duration in ms, 0 = until replaced
     EV_ALERT,           // text: message; stays until the user touches the screen
     EV_ALERT_DISMISSED,
-    EV_WIFI,            // value: 1 connected, 0 disconnected
+    EV_WIFI,            // value: 1 connected, 0 disconnected; text: IP address
     EV_TIME_SYNCED,
     EV_WEATHER,         // new report in weather_store_get()
     EV_TIMER,           // value: seconds left, arg: pomodoro_phase_t (POMO_IDLE when stopped)
+    EV_PC_CONNECTED,    // value: 1 agent authenticated, 0 gone
+    EV_CLAUDE,          // value: claude_event_t, text: project name (may be empty)
+    EV_PC_METRICS,      // new values in pc_metrics_get()
+    EV_PC_SLEEP,        // the PC is about to suspend or shut down
     EV_COUNT,
 } event_id_t;
 

@@ -4,6 +4,7 @@
 #include "esp_lvgl_port.h"
 #include "net.h"
 #include "nvs_flash.h"
+#include "pc_server.h"
 #include "weather_fetch.h"
 
 static const char *TAG = "main";
@@ -34,4 +35,5 @@ void app_main(void)
     lvgl_port_unlock();
 
     weather_fetch_start(CONFIG_BUDDY_LATITUDE, CONFIG_BUDDY_LONGITUDE, CONFIG_BUDDY_OPEN_METEO_TZ);
+    pc_server_start();
 }

@@ -10,3 +10,4 @@ dependencies:
   # Wi-Fi lives on the ESP32-C6, reached over SDIO.
   espressif/esp_wifi_remote: "^1.6.5"
   espressif/esp_hosted: "^3.0.9"
+  espressif/mdns: "*"

@@ -13,6 +13,8 @@ Teclas no simulador: `0`–`9` e `-` trocam o humor, `r` faz uma reação feliz 
 
 `desk_buddy_sim.exe --shots <pasta>` salva cada humor e cada tela como BMP (sem capturar a tela do PC).
 
+O simulador também aceita o agente do PC em `ws://127.0.0.1:8765/ws` (o token aparece no console e na tela **Sistema**); `--trace` imprime cada evento. Protocolo: [protocol/README.md](protocol/README.md).
+
 ## Firmware
 
 Num terminal "ESP-IDF PowerShell" (ou após `. C:\Espressif\tools\Microsoft.v6.0.3.PowerShell_profile.ps1`):

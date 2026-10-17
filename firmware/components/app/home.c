@@ -199,8 +199,14 @@ static void on_event(const event_t *ev, void *ctx)
         face_react(&face, (mood_t)ev->value, (uint32_t)ev->arg);
         break;
     case EV_SAY:
-        if (!alert_overlay) {  // don't cover an alert's message
+        if (alert_overlay) {
+            break;              // don't cover an alert's message
+        }
+        if (ev->text[0]) {
             say(ev->text, (uint32_t)ev->arg);
+        } else {
+            lv_timer_pause(bubble_timer);
+            lv_obj_add_flag(bubble, LV_OBJ_FLAG_HIDDEN);
         }
         break;
     case EV_ALERT:

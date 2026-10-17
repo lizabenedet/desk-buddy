@@ -26,4 +26,6 @@ void pet_on_poked(pet_t *p);
 void pet_on_good_news(pet_t *p);   // e.g. Claude finished a task
 
 bool pet_is_sleep_time(int hour);
-mood_t pet_resting_mood(const pet_t *p, int hour);
+
+// `pc_hot`: the PC is running hot; shows even at night (late gaming).
+mood_t pet_resting_mood(const pet_t *p, int hour, bool pc_hot);

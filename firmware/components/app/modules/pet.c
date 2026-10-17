@@ -2,6 +2,7 @@
 
 #include "icons.h"
 #include "module.h"
+#include "pc_link.h"
 #include "pet.h"
 #include "storage.h"
 #include "ui.h"
@@ -26,7 +27,9 @@ static int current_hour(void)
 
 static void publish_mood(void)
 {
-    mood_t m = pet_resting_mood(&pet, current_hour());
+    pc_metrics_t pc;
+    pc_metrics_get(&pc);
+    mood_t m = pet_resting_mood(&pet, current_hour(), pc_metrics_hot(&pc));
     if (m != published_mood) {
         published_mood = m;
         event_bus_publish_simple(EV_FACE_MOOD, m);
@@ -46,7 +49,9 @@ static void tick(lv_timer_t *t)
     (void)t;
     uint32_t dt = lv_tick_elaps(last_tick);
     last_tick = lv_tick_get();
-    pet_update(&pet, dt, current_hour(), false); // PC load arrives with the agent (phase 7)
+    pc_metrics_t pc;
+    pc_metrics_get(&pc);
+    pet_update(&pet, dt, current_hour(), pc_metrics_busy(&pc));
     publish_mood();
     refresh_bars();
     if (++updates % SAVE_EVERY == 0) {
@@ -66,8 +71,16 @@ static void on_event(const event_t *ev)
         publish_mood();
         refresh_bars();
         break;
-    case EV_TIME_SYNCED:
-        publish_mood();   // the hour decides whether it's bedtime
+    case EV_CLAUDE:
+        if (ev->value == CLAUDE_DONE) {
+            pet_on_good_news(&pet);
+            refresh_bars();
+        }
+        break;
+    case EV_TIME_SYNCED:     // the hour decides whether it's bedtime
+    case EV_PC_METRICS:      // ...and PC heat whether it's hot
+    case EV_PC_CONNECTED:
+        publish_mood();
         break;
     default:
         break;

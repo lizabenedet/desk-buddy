@@ -46,17 +46,18 @@ static void test_unknown_hour_never_sleeps(void)
 static void test_resting_mood(void)
 {
     pet_t p = {.energy = 80, .happiness = 70};
-    CHECK(pet_resting_mood(&p, 14) == MOOD_NEUTRAL);
-    CHECK(pet_resting_mood(&p, 1) == MOOD_ASLEEP);
+    CHECK(pet_resting_mood(&p, 14, false) == MOOD_NEUTRAL);
+    CHECK(pet_resting_mood(&p, 1, false) == MOOD_ASLEEP);
+    CHECK(pet_resting_mood(&p, 1, true) == MOOD_HOT);     // hot PC wins, even at night
     p.energy = 40;
-    CHECK(pet_resting_mood(&p, 14) == MOOD_SLEEPY);
+    CHECK(pet_resting_mood(&p, 14, false) == MOOD_SLEEPY);
     p.energy = 10;
-    CHECK(pet_resting_mood(&p, 14) == MOOD_TIRED);
+    CHECK(pet_resting_mood(&p, 14, false) == MOOD_TIRED);
     p.energy = 80;
     p.happiness = 20;
-    CHECK(pet_resting_mood(&p, 14) == MOOD_SAD);
+    CHECK(pet_resting_mood(&p, 14, false) == MOOD_SAD);
     p.happiness = 90;
-    CHECK(pet_resting_mood(&p, 14) == MOOD_HAPPY);
+    CHECK(pet_resting_mood(&p, 14, false) == MOOD_HAPPY);
 }
 
 int main(void)

@@ -54,8 +54,11 @@ void pet_on_good_news(pet_t *p)
     p->happiness = clamp(p->happiness + GOOD_NEWS_BONUS);
 }
 
-mood_t pet_resting_mood(const pet_t *p, int hour)
+mood_t pet_resting_mood(const pet_t *p, int hour, bool pc_hot)
 {
+    if (pc_hot) {
+        return MOOD_HOT;
+    }
     if (pet_is_sleep_time(hour)) {
         return MOOD_ASLEEP;
     }

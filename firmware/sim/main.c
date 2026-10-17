@@ -5,17 +5,22 @@
 // 's' makes the buddy say something, 'w' cycles fake weather, 'n' toggles
 // Wi-Fi, 'a' raises an alert.
 //
-// --shots <dir>: renders each mood to <dir>/<n>.bmp and exits, for visual
-// checks without screen capture.
+// Agent connection: ws://127.0.0.1:8765/ws (token printed at startup).
+//
+// --shots <dir>             renders each mood and screen to BMPs and exits
+// --snap-after <ms> <file>  runs normally, saves the screen after <ms> and exits
+// --trace                   prints every bus event to stdout
 
 #include "app.h"
 #include "event_bus.h"
 #include "face.h"
 #include "lvgl.h"
 #include "weather.h"
+#include "ws_server.h"
 
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -27,8 +32,9 @@
 #define sleep_ms(ms) usleep((ms) * 1000)
 #endif
 
-#define SIM_H_RES 480
-#define SIM_V_RES 320
+#define SIM_H_RES   480
+#define SIM_V_RES   320
+#define SIM_WS_PORT 8765
 
 // Stand-ins for what the board's fetcher would report.
 static void publish_fake_weather(void)
@@ -179,27 +185,63 @@ static int take_shots(const char *dir)
     return 0;
 }
 
+static void trace_event(const event_t *ev, void *ctx)
+{
+    (void)ctx;
+    printf("event %d value=%d arg=%d text=\"%s\"\n", ev->id, (int)ev->value, (int)ev->arg, ev->text);
+    fflush(stdout);
+}
+
 int main(int argc, char **argv)
 {
+    const char *shots_dir = NULL;
+    const char *snap_path = NULL;
+    uint32_t snap_after_ms = 0;
+    bool trace = false;
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--shots") == 0 && i + 1 < argc) {
+            shots_dir = argv[++i];
+        } else if (strcmp(argv[i], "--snap-after") == 0 && i + 2 < argc) {
+            snap_after_ms = (uint32_t)atoi(argv[++i]);
+            snap_path = argv[++i];
+        } else if (strcmp(argv[i], "--trace") == 0) {
+            trace = true;
+        }
+    }
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
     lv_init();
     lv_display_t *disp = lv_sdl_window_create(SIM_H_RES, SIM_V_RES);
     lv_sdl_window_set_title(disp, "desk-buddy");
     lv_sdl_mouse_create();
 
+    if (trace) {
+        event_bus_subscribe(EV_ANY, trace_event, NULL);
+    }
     app_start();
     setup_dev_keys();
 
     // The PC already has network and a set clock.
-    event_bus_publish_simple(EV_WIFI, 1);
+    event_t wifi = {.id = EV_WIFI, .value = 1};
+    strcpy(wifi.text, "127.0.0.1");
+    event_bus_publish(&wifi);
     event_bus_publish_simple(EV_TIME_SYNCED, 0);
     publish_fake_weather();
 
-    if (argc == 3 && strcmp(argv[1], "--shots") == 0) {
-        return take_shots(argv[2]);
+    if (shots_dir) {
+        return take_shots(shots_dir);
     }
 
+    ws_server_start(SIM_WS_PORT);
+    uint32_t start = lv_tick_get();
     for (;;) {
+        ws_server_poll();
         uint32_t idle = lv_timer_handler();
+        if (snap_path && lv_tick_elaps(start) >= snap_after_ms) {
+            return save_screen_bmp(snap_path) ? 0 : 1;
+        }
         sleep_ms(idle < 5 ? idle : 5);
     }
 }
