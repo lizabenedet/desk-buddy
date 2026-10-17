@@ -1,6 +1,6 @@
 # Ligação do display
 
-Fonte: esquemático da JC-ESP32P4-M3-DEV, conector **JP1 "Expand IO"** (2×13, 26 pinos, mesmo formato do header do Raspberry Pi).
+Fonte: esquemático da JC-ESP32P4-M3-DEV (conector **JP1 "Expand IO"**, 2×13, 26 pinos, mesmo formato do header do Raspberry Pi), confirmado pela imagem "Pin Definitions" do vendedor.
 
 ## ⚠️ Não encaixe o display direto no JP1
 
@@ -23,7 +23,7 @@ Use **jumpers fêmea-fêmea** seguindo a tabela abaixo.
 | 7 | GPIO1 | 8 | — |
 | 9 | GPIO2 | 10 | GPIO47 |
 | 11 | GPIO3 | 12 | GPIO46 |
-| 13 | GPIO4 | 14 | GND / GPIO45 (ambíguo no esquemático — não usar) |
+| 13 | GPIO4 | 14 | GPIO45 |
 | 15 | GPIO5 | 16 | GND |
 | 17 | GPIO20 | 18 | VCC3V3 |
 | 19 | GPIO32 | 20 | C6_U0RXD |
