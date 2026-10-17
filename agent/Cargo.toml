@@ -1,0 +1,27 @@
+[package]
+name = "desk-buddy-agent"
+version = "0.1.0"
+edition = "2024"
+description = "PC side of desk-buddy: sends Claude Code hooks and PC metrics to the buddy"
+
+# Binaries: src/bin/buddy.rs (console CLI) and src/bin/buddy-tray.rs (tray, no console).
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
+dirs = "7.0.0"
+futures-util = "0.3.34"
+log = "0.4.34"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+simplelog = "0.12.2"
+sysinfo = "0.39.6"
+tokio = { version = "1.53.3", features = ["rt-multi-thread", "macros", "net", "time", "sync", "io-util", "signal"] }
+tokio-tungstenite = "0.30.0"
+toml = "1.1.8"
+tray-icon = "0.26.1"
+windows-sys = { version = "0.61.2", features = ["Win32_UI_WindowsAndMessaging", "Win32_System_Console", "Win32_Foundation", "Win32_System_Threading"] }
+winreg = "0.56.0"
+
+[profile.release]
+strip = true
+lto = true

@@ -28,6 +28,10 @@ idf.py -p COMx flash monitor
 
 Cidade padrão do clima: Jaraguá do Sul (lat/lon e fuso também no menu `desk-buddy`).
 
+## Agente do PC
+
+Em Rust, na pasta `agent/`: bandeja + início com o Windows, métricas (CPU/RAM; GPU e temperaturas via LibreHardwareMonitor) e os hooks do Claude Code. Instruções em [agent/README.md](agent/README.md).
+
 ## Adicionando uma feature
 
 1. Crie `firmware/components/app/modules/<nome>.c` com um `module_t` (veja `clock.c`).
