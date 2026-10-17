@@ -3,3 +3,4 @@ firmware/managed_components/
 firmware/sdkconfig
 firmware/sdkconfig.old
 agent/target/
+firmware/sim/build/

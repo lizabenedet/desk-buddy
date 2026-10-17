@@ -1,0 +1,36 @@
+#pragma once
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+// Events are published from any task and delivered later, on the UI task,
+// by event_bus_dispatch(). Handlers may therefore touch LVGL directly.
+
+typedef enum {
+    EV_ANY = 0,         // subscribe-only: receive every event
+    EV_FACE_TOUCHED,
+    EV_COUNT,
+} event_id_t;
+
+#define EVENT_TEXT_MAX 48
+
+typedef struct {
+    event_id_t id;
+    int32_t value;
+    char text[EVENT_TEXT_MAX];
+} event_t;
+
+typedef void (*event_handler_t)(const event_t *ev, void *ctx);
+
+void event_bus_reset(void);
+bool event_bus_subscribe(event_id_t id, event_handler_t handler, void *ctx);
+
+// Copies the event into the queue. Returns false (and drops it) when full.
+bool event_bus_publish(const event_t *ev);
+bool event_bus_publish_simple(event_id_t id, int32_t value);
+
+// Delivers queued events to subscribers. Returns how many were delivered.
+size_t event_bus_dispatch(void);
+
+uint32_t event_bus_dropped(void);
