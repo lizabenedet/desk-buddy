@@ -65,11 +65,13 @@ static esp_err_t init_touch(esp_lcd_touch_handle_t *out_touch)
         .x_max = LCD_V_RES,
         .y_max = LCD_H_RES,
         .rst_gpio_num = -1,
-        .int_gpio_num = PIN_TOUCH_IRQ,
+        // Polled, not interrupt-driven: with an IRQ pin esp_lvgl_port switches the indev to
+        // event mode and only reads on PENIRQ edges, which breaks drags (tileview swipes).
+        .int_gpio_num = -1,
         .flags = {
             .swap_xy = 1,
             .mirror_x = 0,
-            .mirror_y = 0,
+            .mirror_y = 1,
         },
     };
     return esp_lcd_touch_new_spi_xpt2046(tp_io, &tp_cfg, out_touch);
